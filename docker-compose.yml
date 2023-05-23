@@ -1,0 +1,57 @@
+version: "3.1"
+
+services:
+  postgres:
+    image: postgres
+    restart: always
+    environment:
+      POSTGRES_PASSWORD: OpenCV
+      POSTGRES_USER: postgres
+      POSTGRES_DB: postgres
+    ports:
+      - 5432:5432
+    volumes:
+      - ${POSTGRESQL_VOLUME}:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  pgadmin4:
+    image: dpage/pgadmin4
+    restart: always
+    environment:
+      PGADMIN_DEFAULT_EMAIL: make@makeitnow.in
+      PGADMIN_DEFAULT_PASSWORD: OpenCV
+    ports:
+      - 8086:80
+    volumes:
+      - ${PGADMIN_VOLUME}:/var/lib/pgadmin
+
+  react:
+    build:
+      context: ${REPO_FRONT_PATH}
+      dockerfile: ${REPO_PATH_INFRASTRUCTURE}/Dockerfiles/react_files
+    expose:
+      - 80
+    ports:
+      - 80:80
+    volumes:
+      - ${REPO_FRONT_PATH}/packages/main/build:/usr/share/nginx/html
+
+  flask:
+    build:
+      context: ${REPO_BACK_PATH}
+      dockerfile: ${REPO_PATH_INFRASTRUCTURE}/Dockerfiles/flask_files
+    expose:
+      - 5000
+    ports:
+      - 9393:5000
+    depends_on:
+      postgres:
+        condition: service_healthy
+    links:
+      - postgres
+    environment:
+      - FLASK_ENV=development
